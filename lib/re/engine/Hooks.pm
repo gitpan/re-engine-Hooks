@@ -11,7 +11,7 @@ re::engine::Hooks - Hookable variant of the Perl core regular expression engine.
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
@@ -20,7 +20,7 @@ our ($VERSION, @ISA);
 sub dl_load_flags { 0x01 }
 
 BEGIN {
- $VERSION = '0.01';
+ $VERSION = '0.02';
  require DynaLoader;
  push @ISA, qw<Regexp DynaLoader>;
  __PACKAGE__->bootstrap($VERSION);
@@ -32,7 +32,7 @@ In your XS file :
 
     #include "re_engine_hooks.h"
 
-    STATIC void dri_comp_hook(pTHX_ regexp *rx, regnode *node) {
+    STATIC void dri_comp_node_hook(pTHX_ regexp *rx, regnode *node) {
      ...
     }
 
@@ -45,7 +45,10 @@ In your XS file :
 
     BOOT:
     {
-     reh_register("Devel::Regexp::Instrument", dri_comp_hook, dri_exec_hook);
+     reh_config cfg;
+     cfg.comp_node = dri_comp_node_hook;
+     cfg.exec_node = dri_exec_node_hook;
+     reh_register("Devel::Regexp::Instrument", &cfg);
     }
 
 In your Perl module file :
@@ -60,7 +63,7 @@ In your Perl module file :
     use re::engine::Hooks; # Before loading our own shared library
 
     BEGIN {
-     $VERSION = '0.01';
+     $VERSION = '0.02';
      require DynaLoader;
      push @ISA, 'DynaLoader';
      __PACKAGE__->bootstrap($VERSION);
@@ -93,27 +96,50 @@ This module provides a version of the perl regexp engine that can call user-defi
 
 The C API is made available through the F<re_engine_hooks.h> header file.
 
-=head2 C<reh_comp_hook>
+=head2 C<reh_comp_node_hook>
 
-The typedef for the regexp compilation phase hook.
+The typedef for the regexp node compilation phase hook.
 Currently evaluates to :
 
-    typedef void (*reh_comp_hook)(pTHX_ regexp *, regnode *);
+    typedef void (*reh_comp_node_hook)(pTHX_ regexp *, regnode *);
 
 =head2 C<reh_exec_hook>
 
-The typedef for the regexp execution phase hook.
+The typedef for the regexp node_execution phase hook.
 Currently evaluates to :
 
-    typedef void (*reh_exec_hook)(pTHX_ regexp *, regnode *, regmatch_info *, regmatch_state *);
+    typedef void (*reh_exec_node_hook)(pTHX_ regexp *, regnode *, regmatch_info *, regmatch_state *);
+
+=head2 C<reh_config>
+
+A typedef'd struct that holds a set of all the different callbacks publicized by this module.
+It has the following members :
+
+=over 4
+
+=item *
+
+C<comp_node>
+
+A function pointer of type C<reh_comp_node_hook> that will be called each time a regnode is compiled.
+Allowed to be C<NULL> if you don't want to call anything for this phase.
+
+=item *
+
+C<exec_node>
+
+A function pointer of type C<reh_exec_node_hook> that will be called each time a regnode is executed.
+Allowed to be C<NULL> if you don't want to call anything for this phase.
+
+=back
 
 =head2 C<reh_register>
 
-    void reh_register(pTHX_ const char *key, reh_comp_hook comp, reh_exec_hook exec);
+    void reh_register(pTHX_ const char *key, reh_config *cfg);
 
-Registers under the given name C<key> a callback C<comp> that will run during the compilation phase and a callback C<exec> that will run during the execution phase.
-Null function pointers are allowed in case you don't want to hook one of the phases.
-C<key> should match with the argument passed to L</enable> and L</disable> in Perl land.
+Registers the callbacks specified by the C<reh_config *> object C<cfg> under the given name C<key>.
+C<cfg> can be a pointer to a static object of type C<reh_config>.
+C<key> is expected to be a nul-terminated string and should match the argument passed to L</enable> and L</disable> in Perl land.
 An exception will be thrown if C<key> has already been used to register callbacks.
 
 =cut
@@ -131,13 +157,13 @@ my $croak = sub {
 
     enable $key;
 
-Lexically enables the hooks associated with the key C<$key>
+Lexically enables the hooks associated with the key C<$key>.
 
 =head2 C<disable>
 
     disable $key;
 
-Lexically disables the hooks associated with the key C<$key>
+Lexically disables the hooks associated with the key C<$key>.
 
 =cut
 
@@ -179,7 +205,7 @@ sub disable {
 
 =head1 EXAMPLES
 
-See the F<t/re-engine-Hooks-TestDist/> directory in the distribution.
+Please refer to the F<t/re-engine-Hooks-TestDist/> directory in the distribution.
 It implements a couple of simple examples.
 
 =head1 DEPENDENCIES

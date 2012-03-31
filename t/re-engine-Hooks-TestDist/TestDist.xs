@@ -22,38 +22,44 @@ STATIC SV *reht_foo_var;
   av_push((AV *) SvRV(V), sv);         \
  } } while (0)
 
-STATIC void reht_foo_comp(pTHX_ regexp *rx, regnode *node) {
+STATIC void reht_foo_comp_node(pTHX_ regexp *rx, regnode *node) {
  REHT_PUSH_NODE_NAME(reht_foo_var, "c:");
 }
 
-STATIC void reht_foo_exec(pTHX_ regexp *rx, regnode *node, regmatch_info *reginfo, regmatch_state *st) {
+STATIC void reht_foo_exec_node(pTHX_ regexp *rx, regnode *node, regmatch_info *reginfo, regmatch_state *st) {
  REHT_PUSH_NODE_NAME(reht_foo_var, "e:");
 }
 
 STATIC SV *reht_bar_var;
 
-STATIC void reht_bar_comp(pTHX_ regexp *rx, regnode *node) {
+STATIC void reht_bar_comp_node(pTHX_ regexp *rx, regnode *node) {
  REHT_PUSH_NODE_NAME(reht_bar_var, "c:");
 }
 
-STATIC void reht_bar_exec(pTHX_ regexp *rx, regnode *node, regmatch_info *reginfo, regmatch_state *st) {
+STATIC void reht_bar_exec_node(pTHX_ regexp *rx, regnode *node, regmatch_info *reginfo, regmatch_state *st) {
  REHT_PUSH_NODE_NAME(reht_bar_var, "e:");
 }
 
 STATIC SV *reht_custom_var;
 
-STATIC void reht_custom_comp(pTHX_ regexp *rx, regnode *node) {
+STATIC void reht_custom_comp_node(pTHX_ regexp *rx, regnode *node) {
  const char *node_name;
 
  node_name = PL_reg_name[OP(node)];
 }
 
-STATIC void reht_custom_exec(pTHX_ regexp *rx, regnode *node, regmatch_info *reginfo, regmatch_state *st) {
+STATIC struct re_save_state reht_state_bak;
+
+STATIC void reht_custom_exec_node(pTHX_ regexp *rx, regnode *node, regmatch_info *reginfo, regmatch_state *st) {
  STRLEN      node_namelen;
  const char *node_name;
 
  node_name    = PL_reg_name[OP(node)];
  node_namelen = strlen(node_name);
+
+ /* The global regexp state may be overwritten if the Perl callback does a
+  * regexp match. */
+ reht_state_bak = PL_reg_state;
 
  dSP;
 
@@ -69,6 +75,8 @@ STATIC void reht_custom_exec(pTHX_ regexp *rx, regnode *node, regmatch_info *reg
 
  FREETMPS;
  LEAVE;
+
+ PL_reg_state = reht_state_bak;
 }
 
 /* --- XS ------------------------------------------------------------------ */
@@ -79,14 +87,29 @@ PROTOTYPES: ENABLE
 
 BOOT:
 {
- reh_register(__PACKAGE__ "::foo", reht_foo_comp, reht_foo_exec);
- reht_foo_var = NULL;
+ {
+  reh_config foo_cfg;
+  foo_cfg.comp_node = reht_foo_comp_node;
+  foo_cfg.exec_node = reht_foo_exec_node;
+  reh_register(__PACKAGE__ "::foo", &foo_cfg);
+  reht_foo_var = NULL;
+ }
 
- reh_register(__PACKAGE__ "::bar", reht_bar_comp, reht_bar_exec);
- reht_bar_var = NULL;
+ {
+  reh_config bar_cfg;
+  bar_cfg.comp_node = reht_bar_comp_node;
+  bar_cfg.exec_node = reht_bar_exec_node;
+  reh_register(__PACKAGE__ "::bar", &bar_cfg);
+  reht_bar_var = NULL;
+ }
 
- reh_register(__PACKAGE__ "::custom", reht_custom_comp, reht_custom_exec);
- reht_custom_var = NULL;
+ {
+  reh_config custom_cfg;
+  custom_cfg.comp_node = reht_custom_comp_node;
+  custom_cfg.exec_node = reht_custom_exec_node;
+  reh_register(__PACKAGE__ "::custom", &custom_cfg);
+  reht_custom_var = NULL;
+ }
 }
 
 void

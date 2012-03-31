@@ -1,5 +1,14 @@
 Revision history for re-engine-Hooks
 
+0.02    2012-02-31 15:50 UTC
+        + Chg : INCOMPATIBLE CHANGE : Arguments are now passed to
+                reh_register() through a configuration structure.
+        + Chg : The node compilation hook is now called when a branch is
+                converted into a trie.
+        + Fix : The module now builds correctly on perl 5.15.5 and greater.
+        + Fix : Duplicated symbols on Windows should have been pruned.
+        + Fix : The module is now be thread-safe.
+
 0.01    2012-03-29 22:00 UTC
         First version, released on an unsuspecting world.
 

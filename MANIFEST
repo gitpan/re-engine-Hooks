@@ -7,6 +7,7 @@ Makefile.PL
 README
 configure_test.pl
 lib/re/engine/Hooks.pm
+ptable.h
 re_defs.h
 re_engine_hooks.h
 re_top.h
@@ -108,6 +109,7 @@ src/update.pl
 t/00-load.t
 t/05-keys.t
 t/10-base.t
+t/11-call-perl.t
 t/20-multi.t
 t/91-pod.t
 t/92-pod-coverage.t

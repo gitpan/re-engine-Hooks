@@ -3,14 +3,14 @@ NAME
     engine.
 
 VERSION
-    Version 0.01
+    Version 0.02
 
 SYNOPSIS
     In your XS file :
 
         #include "re_engine_hooks.h"
 
-        STATIC void dri_comp_hook(pTHX_ regexp *rx, regnode *node) {
+        STATIC void dri_comp_node_hook(pTHX_ regexp *rx, regnode *node) {
          ...
         }
 
@@ -23,7 +23,10 @@ SYNOPSIS
 
         BOOT:
         {
-         reh_register("Devel::Regexp::Instrument", dri_comp_hook, dri_exec_hook);
+         reh_config cfg;
+         cfg.comp_node = dri_comp_node_hook;
+         cfg.exec_node = dri_exec_node_hook;
+         reh_register("Devel::Regexp::Instrument", &cfg);
         }
 
     In your Perl module file :
@@ -38,7 +41,7 @@ SYNOPSIS
         use re::engine::Hooks; # Before loading our own shared library
 
         BEGIN {
-         $VERSION = '0.01';
+         $VERSION = '0.02';
          require DynaLoader;
          push @ISA, 'DynaLoader';
          __PACKAGE__->bootstrap($VERSION);
@@ -71,42 +74,58 @@ DESCRIPTION
 C API
     The C API is made available through the re_engine_hooks.h header file.
 
-  "reh_comp_hook"
-    The typedef for the regexp compilation phase hook. Currently evaluates
-    to :
+  "reh_comp_node_hook"
+    The typedef for the regexp node compilation phase hook. Currently
+    evaluates to :
 
-        typedef void (*reh_comp_hook)(pTHX_ regexp *, regnode *);
+        typedef void (*reh_comp_node_hook)(pTHX_ regexp *, regnode *);
 
   "reh_exec_hook"
-    The typedef for the regexp execution phase hook. Currently evaluates to
-    :
+    The typedef for the regexp node_execution phase hook. Currently
+    evaluates to :
 
-        typedef void (*reh_exec_hook)(pTHX_ regexp *, regnode *, regmatch_info *, regmatch_state *);
+        typedef void (*reh_exec_node_hook)(pTHX_ regexp *, regnode *, regmatch_info *, regmatch_state *);
+
+  "reh_config"
+    A typedef'd struct that holds a set of all the different callbacks
+    publicized by this module. It has the following members :
+
+    *   "comp_node"
+
+        A function pointer of type "reh_comp_node_hook" that will be called
+        each time a regnode is compiled. Allowed to be "NULL" if you don't
+        want to call anything for this phase.
+
+    *   "exec_node"
+
+        A function pointer of type "reh_exec_node_hook" that will be called
+        each time a regnode is executed. Allowed to be "NULL" if you don't
+        want to call anything for this phase.
 
   "reh_register"
-        void reh_register(pTHX_ const char *key, reh_comp_hook comp, reh_exec_hook exec);
+        void reh_register(pTHX_ const char *key, reh_config *cfg);
 
-    Registers under the given name "key" a callback "comp" that will run
-    during the compilation phase and a callback "exec" that will run during
-    the execution phase. Null function pointers are allowed in case you
-    don't want to hook one of the phases. "key" should match with the
-    argument passed to "enable" and "disable" in Perl land. An exception
-    will be thrown if "key" has already been used to register callbacks.
+    Registers the callbacks specified by the "reh_config *" object "cfg"
+    under the given name "key". "cfg" can be a pointer to a static object of
+    type "reh_config". "key" is expected to be a nul-terminated string and
+    should match the argument passed to "enable" and "disable" in Perl land.
+    An exception will be thrown if "key" has already been used to register
+    callbacks.
 
 PERL API
   "enable"
         enable $key;
 
-    Lexically enables the hooks associated with the key $key
+    Lexically enables the hooks associated with the key $key.
 
   "disable"
         disable $key;
 
-    Lexically disables the hooks associated with the key $key
+    Lexically disables the hooks associated with the key $key.
 
 EXAMPLES
-    See the t/re-engine-Hooks-TestDist/ directory in the distribution. It
-    implements a couple of simple examples.
+    Please refer to the t/re-engine-Hooks-TestDist/ directory in the
+    distribution. It implements a couple of simple examples.
 
 DEPENDENCIES
     perl 5.10.1.

@@ -2149,6 +2149,7 @@ S_make_trie(pTHX_ RExC_state_t *pRExC_state, regnode *startbranch, regnode *firs
             Set_Node_Offset_Length(convert,mjd_offset,mjd_nodelen);
         });
     } /* end node insert */
+    REH_CALL_COMP_NODE_HOOK(pRExC_state->rx, convert);
     RExC_rxi->data->data[ data_slot + 1 ] = (void*)widecharmap;
 #ifdef DEBUGGING
     RExC_rxi->data->data[ data_slot + TRIE_WORDS_OFFSET ] = (void*)trie_words;
@@ -4410,6 +4411,7 @@ redo_first_pass:
     RExC_rx_sv = rx;
     RExC_rx = r;
     RExC_rxi = ri;
+    REH_CALL_COMP_BEGIN_HOOK(pRExC_state->rx);
 
     /* Second pass: emit code. */
     RExC_flags = pm_flags;	/* don't let top level (?i) bleed */
@@ -8589,7 +8591,7 @@ S_reg_node(pTHX_ RExC_state_t *pRExC_state, U8 op)
     NODE_ALIGN_FILL(ret);
     ptr = ret;
     FILL_ADVANCE_NODE(ptr, op);
-    REH_CALL_REGCOMP_HOOK(pRExC_state->rx, (ptr) - 1);
+    REH_CALL_COMP_NODE_HOOK(pRExC_state->rx, (ptr) - 1);
 #ifdef RE_TRACK_PATTERN_OFFSETS
     if (RExC_offsets) {         /* MJD */
 	MJD_OFFSET_DEBUG(("%s:%d: (op %s) %s %"UVuf" (len %"UVuf") (max %"UVuf").\n", 
@@ -8645,7 +8647,7 @@ S_reganode(pTHX_ RExC_state_t *pRExC_state, U8 op, U32 arg)
     NODE_ALIGN_FILL(ret);
     ptr = ret;
     FILL_ADVANCE_NODE_ARG(ptr, op, arg);
-    REH_CALL_REGCOMP_HOOK(pRExC_state->rx, (ptr) - 2);
+    REH_CALL_COMP_NODE_HOOK(pRExC_state->rx, (ptr) - 2);
 #ifdef RE_TRACK_PATTERN_OFFSETS
     if (RExC_offsets) {         /* MJD */
 	MJD_OFFSET_DEBUG(("%s(%d): (op %s) %s %"UVuf" <- %"UVuf" (max %"UVuf").\n", 
@@ -8762,7 +8764,7 @@ S_reginsert(pTHX_ RExC_state_t *pRExC_state, U8 op, regnode *opnd, U32 depth)
 #endif    
     src = NEXTOPER(place);
     FILL_ADVANCE_NODE(place, op);
-    REH_CALL_REGCOMP_HOOK(pRExC_state->rx, (place) - 1);
+    REH_CALL_COMP_NODE_HOOK(pRExC_state->rx, (place) - 1);
     Zero(src, offset, regnode);
 }
 

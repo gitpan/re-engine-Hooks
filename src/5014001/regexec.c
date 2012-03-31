@@ -3101,7 +3101,7 @@ S_regmatch(pTHX_ regmatch_info *reginfo, regnode *prog)
 	    next = NULL;
 	state_num = OP(scan);
 
-	REH_CALL_REGEXEC_HOOK(rex, scan, reginfo, st);
+	REH_CALL_EXEC_NODE_HOOK(rex, scan, reginfo, st);
       reenter_switch:
 
 	assert(PL_reglastparen == &rex->lastparen);

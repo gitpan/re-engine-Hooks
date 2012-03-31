@@ -43,13 +43,13 @@ local $SIG{'INT'} = sub { exit 1 };
 
  sub new {
   my $class = shift;
- 
+
   my %args = @_;
   my ($path, $indent, $keep) = @args{qw<path indent keep>};
 
   die "Path $path already exists" if -e $path;
   File::Path::mkpath($path);
- 
+
   bless {
    path   => $path,
    indent => $indent || 0,
@@ -216,26 +216,50 @@ sub fetch_source_file {
  }
 }
 
+my %patched_chunks;
+my %expected_chunks = (
+ 'regcomp.c' => [
+  're_defs',
+  'COMP_NODE_HOOK',
+  'COMP_BEGIN_HOOK',
+  ('COMP_NODE_HOOK') x 3,
+ ],
+ 'regexec.c' => [
+  're_defs',
+  'EXEC_NODE_HOOK',
+ ],
+);
+
 sub patch_regcomp {
- my $line = $_[0];
+ my ($line, $file) = @_;
 
  if ($line =~ /#\s*include\s+"INTERN\.h"/) {
+  push @{$patched_chunks{$file}}, 're_defs';
   return "#include \"re_defs.h\"\n";
+ } elsif ($line =~ /^(\s*)RExC_rxi\s*=\s*ri\s*;\s*$/) {
+  push @{$patched_chunks{$file}}, 'COMP_BEGIN_HOOK';
+  return $line, "$1REH_CALL_COMP_BEGIN_HOOK(pRExC_state->rx);\n";
  } elsif ($line =~ /FILL_ADVANCE_NODE(_ARG)?\(\s*([^\s,\)]+)/) {
   my $shift = $1 ? 2 : 1;
-  return $line, "    REH_CALL_REGCOMP_HOOK(pRExC_state->rx, ($2) - $shift);\n"
+  push @{$patched_chunks{$file}}, 'COMP_NODE_HOOK';
+  return $line, "    REH_CALL_COMP_NODE_HOOK(pRExC_state->rx, ($2) - $shift);\n"
+ } elsif ($line =~ /end node insert/) {
+  push @{$patched_chunks{$file}}, 'COMP_NODE_HOOK';
+  return $line, "    REH_CALL_COMP_NODE_HOOK(pRExC_state->rx, convert);\n";
  }
 
  return $line;
 }
 
 sub patch_regexec {
- my $line = $_[0];
+ my ($line, $file) = @_;
 
  if ($line =~ /#\s*include\s+"perl\.h"/) {
+  push @{$patched_chunks{$file}}, 're_defs';
   return $line, "#include \"re_defs.h\"\n";
  } elsif ($line =~ /^\s*reenter_switch:\s*$/) {
-  return "\tREH_CALL_REGEXEC_HOOK(rex, scan, reginfo, st);\n", $line;
+  push @{$patched_chunks{$file}}, 'EXEC_NODE_HOOK';
+  return "\tREH_CALL_EXEC_NODE_HOOK(rex, scan, reginfo, st);\n", $line;
  }
 
  return $line;
@@ -264,7 +288,13 @@ sub patch_source_file {
  open my $out, '>', $dst or die "Can't open $dst for writing: $!";
 
  while (defined(my $line = <$in>)) {
-  print $out $mangler->($line);
+  print $out $mangler->($line, $dst);
+ }
+
+ my $patched_chunks  = join ' ', @{$patched_chunks{$dst}};
+ my $expected_chunks = join ' ', @{$expected_chunks{$file}};
+ unless ($patched_chunks eq $expected_chunks) {
+  die "File $dst was not properly patched (got \"$patched_chunks\", expected \"$expected_chunks\")\n";
  }
 
  return 1;
@@ -317,4 +347,4 @@ for my $tag (sort { $a <=> $b } keys %perls) {
  print $out sort @manifest_files, @source_files;
 
  print "done\n";
-} 
+}
