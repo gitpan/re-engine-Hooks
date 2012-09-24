@@ -3,7 +3,7 @@ NAME
     engine.
 
 VERSION
-    Version 0.02
+    Version 0.03
 
 SYNOPSIS
     In your XS file :
@@ -14,8 +14,8 @@ SYNOPSIS
          ...
         }
 
-        STATIC void dri_exec_hook(pTHX_ regexp *rx, regnode *node,
-                                  regmatch_info *info, regmatch_state *state) {
+        STATIC void dri_exec_node_hook(pTHX_
+           regexp *rx, regnode *node, regmatch_info *info, regmatch_state *state) {
          ...
         }
 
@@ -41,7 +41,7 @@ SYNOPSIS
         use re::engine::Hooks; # Before loading our own shared library
 
         BEGIN {
-         $VERSION = '0.02';
+         $VERSION = '0.01';
          require DynaLoader;
          push @ISA, 'DynaLoader';
          __PACKAGE__->bootstrap($VERSION);
@@ -80,7 +80,7 @@ C API
 
         typedef void (*reh_comp_node_hook)(pTHX_ regexp *, regnode *);
 
-  "reh_exec_hook"
+  "reh_exec_node_hook"
     The typedef for the regexp node_execution phase hook. Currently
     evaluates to :
 

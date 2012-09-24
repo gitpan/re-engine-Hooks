@@ -1,5 +1,11 @@
 Revision history for re-engine-Hooks
 
+0.03    2012-09-24 11:10 UTC
+        + Doc : reh_exec_hook() has been correctly renamed to
+                reh_exec_node_hook() in the documentation.
+        + Fix : The module now links correctly on Windows.
+        + Upd : Support for perl 5.16.[01] and 5.17.[01234] has been added.
+
 0.02    2012-02-31 15:50 UTC
         + Chg : INCOMPATIBLE CHANGE : Arguments are now passed to
                 reh_register() through a configuration structure.

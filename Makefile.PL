@@ -55,7 +55,7 @@ sub versioned_file {
  require File::Spec;
  my $versioned_file = File::Spec->catfile('src', $version, $file);
 
- return -e $versioned_file ? $versioned_file : undef;
+ return -e $versioned_file ? [ $file => $versioned_file ] : undef;
 }
 
 unless (defined versioned_file('regcomp.c')) {
@@ -74,8 +74,8 @@ my @DEFINES = qw<-DPERL_EXT_RE_BUILD -DPERL_EXT>;
 use ExtUtils::Depends;
 
 my $ed = ExtUtils::Depends->new($name);
-$ed->add_c('re_comp.c');
-$ed->add_c('re_exec.c');
+$ed->add_c('regcomp.c');
+$ed->add_c('regexec.c');
 $ed->add_xs('Hooks.xs');
 $ed->add_pm($file => do { local $_ = $file; s/^lib/\$(INST_LIB)/; $_ });
 $ed->install('re_engine_hooks.h');
@@ -86,7 +86,7 @@ $ed_vars{clean}->{FILES} .= ' ' . join ' ', (
  "$dist-*",
  'Files.pm',
  qw<*.gcov *.gcda *.gcno cover_db Debian_CPANTS.txt>,
- qw<re_comp.c re_exec.c dquote_static.c>,
+ qw<regcomp.c regexec.c dquote_static.c inline_invlist.c>,
 );
 
 WriteMakefile(
@@ -103,7 +103,7 @@ WriteMakefile(
   PREOP    => "pod2text $file > \$(DISTVNAME)/README",
   COMPRESS => 'gzip -9f', SUFFIX => 'gz'
  },
- XSPROTOARG		     => '-noprototypes',
+ XSPROTOARG       => '-noprototypes',
  @DEFINES,
  FUNCLIST         => [ qw<
   boot_re__engine__Hooks
@@ -127,35 +127,39 @@ WriteMakefile(
 package MY;
 
 sub postamble {
- my $regcomp_c       = main::versioned_file('regcomp.c');
- my $regexec_c       = main::versioned_file('regexec.c');
- my $dquote_static_c = main::versioned_file('dquote_static.c');
+ my $regcomp_c        = main::versioned_file('regcomp.c');
+ my $regexec_c        = main::versioned_file('regexec.c');
+ my $dquote_static_c  = main::versioned_file('dquote_static.c');
+ my $inline_invlist_c = main::versioned_file('inline_invlist.c');
 
- my $dquote_static_dep = defined $dquote_static_c ? 'dquote_static.c' : '';
+ my @all_c          = ($regcomp_c, $regexec_c);
+ my @regcomp_c_deps = ('regcomp.c');
+ my @regexec_c_deps = ('regexec.c');
 
- my $rules = <<EOF;
-re_comp.c : $regcomp_c
-	- \$(RM_F) re_comp.c
-	\$(CP) $regcomp_c re_comp.c
-
-re_comp\$(OBJ_EXT) : re_comp.c $dquote_static_dep
-
-re_exec.c : $regexec_c
-	- \$(RM_F) re_exec.c
-	\$(CP) $regexec_c re_exec.c
-
-re_exec\$(OBJ_EXT) : re_exec.c
-
-EOF
-
- if (defined $dquote_static_c) {
-  $rules .= <<EOF;
-dquote_static.c : $dquote_static_c
-	- \$(RM_F) dquote_static.c
-	\$(CP) $dquote_static_c dquote_static.c
-
-EOF
+ for my $extra_c ($dquote_static_c, $inline_invlist_c) {
+  next unless defined $extra_c;
+  push @all_c,           $extra_c;
+  push @regcomp_c_deps, $extra_c->[0];
  }
+
+ my $rules;
+
+ for my $file_c (@all_c) {
+  my ($target_file, $versioned_file) = @$file_c;
+  $rules .= <<"RULE";
+$target_file : $versioned_file
+	- \$(RM_F) $target_file
+	\$(CP) $versioned_file $target_file
+
+RULE
+ }
+
+ $rules .= <<"RULE";
+regcomp\$(OBJ_EXT) : @regcomp_c_deps
+
+regexec\$(OBJ_EXT) : @regexec_c_deps
+
+RULE
 
  $rules .= <<'EOF';
 configure_test.pl: args.dat

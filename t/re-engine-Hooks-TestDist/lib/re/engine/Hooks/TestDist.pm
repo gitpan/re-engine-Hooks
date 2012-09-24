@@ -10,7 +10,7 @@ our ($VERSION, @ISA);
 use re::engine::Hooks;
 
 BEGIN {
- $VERSION = '0.02';
+ $VERSION = '0.03';
  require DynaLoader;
  push @ISA, 'DynaLoader';
  __PACKAGE__->bootstrap($VERSION);

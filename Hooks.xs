@@ -117,16 +117,13 @@ void reh_register(pTHX_ const char *key, reh_config *cfg) {
 #endif
 
 #if PERL_VERSION <= 10
-EXTERN_C REGEXP *reh_regcomp(pTHX_ const SV * const, const U32);
+EXTERN_C REGEXP *reh_re_compile(pTHX_ const SV * const, const U32);
 #else
-EXTERN_C REGEXP *reh_regcomp(pTHX_ SV * const, U32);
+EXTERN_C REGEXP *reh_re_compile(pTHX_ SV * const, U32);
 #endif
-EXTERN_C I32     reh_regexec(pTHX_ REGEXP * const, char *, char *,
-                                   char *, I32, SV *, void *, U32);
-EXTERN_C char *  reh_re_intuit_start(pTHX_ REGEXP * const, SV *, char *,
-                                           char *, U32, re_scream_pos_data *);
+EXTERN_C I32     reh_regexec_flags(pTHX_ REGEXP * const, char *, char *, char *, I32, SV *, void *, U32);
+EXTERN_C char *  reh_re_intuit_start(pTHX_ REGEXP * const, SV *, char *, char *, U32, re_scream_pos_data *);
 EXTERN_C SV *    reh_re_intuit_string(pTHX_ REGEXP * const);
-EXTERN_C void    reh_regfree(pTHX_ REGEXP * const);
 EXTERN_C void    reh_re_free(pTHX_ REGEXP * const);
 EXTERN_C void    reh_reg_numbered_buff_fetch(pTHX_ REGEXP * const,
                                                    const I32, SV * const);
@@ -140,15 +137,15 @@ EXTERN_C SV *    reh_reg_named_buff_iter(pTHX_ REGEXP * const,
                                                const SV * const, const U32);
 EXTERN_C SV *    reh_reg_qr_package(pTHX_ REGEXP * const);
 #ifdef USE_ITHREADS
-EXTERN_C void *  reh_regdupe(pTHX_ REGEXP * const, CLONE_PARAMS *);
 EXTERN_C void *  reh_re_dupe(pTHX_ REGEXP * const, CLONE_PARAMS *);
 #endif
-
-EXTERN_C const struct regexp_engine reh_regexp_engine;
+#if REH_HAS_PERL(5, 17, 1)
+EXTERN_C REGEXP *reh_re_op_compile(pTHX_ SV ** const, int, OP *, const regexp_engine*, REGEXP *VOL, bool *, U32, U32);
+#endif
 
 const struct regexp_engine reh_regexp_engine = {
- reh_regcomp,
- reh_regexec,
+ reh_re_compile,
+ reh_regexec_flags,
  reh_re_intuit_start,
  reh_re_intuit_string,
  reh_re_free,
@@ -157,13 +154,16 @@ const struct regexp_engine reh_regexp_engine = {
  reh_reg_numbered_buff_length,
  reh_reg_named_buff,
  reh_reg_named_buff_iter,
- reh_reg_qr_package,
+ reh_reg_qr_package
 #if defined(USE_ITHREADS)
- reh_re_dupe
+ , reh_re_dupe
+#endif
+#if REH_HAS_PERL(5, 17, 1)
+ , reh_re_op_compile
 #endif
 };
 
-/* --- Private API --------------------------------------------------------- */
+/* --- Internal regexp structure -> hook list inside-out mapping ----------- */
 
 typedef struct {
  size_t            count;
@@ -220,7 +220,7 @@ STATIC perl_mutex reh_private_map_mutex;
  REH_UNLOCK(&reh_private_map_mutex);                 \
 } STMT_END
 
-STATIC reh_private *reh_private_map_store(pTHX_ void *ri, reh_private *priv) {
+STATIC void reh_private_map_store(pTHX_ void *ri, reh_private *priv) {
 #define reh_private_map_store(R, P) reh_private_map_store(aTHX_ (R), (P))
  REH_LOCK(&reh_private_map_mutex);
  ptable_private_store(reh_private_map, ri, priv);
@@ -250,6 +250,8 @@ STATIC void reh_private_map_delete(pTHX_ void *ri) {
 
  return;
 }
+
+/* --- Private API --------------------------------------------------------- */
 
 void reh_call_comp_begin_hook(pTHX_ regexp *rx) {
  SV *hint = reh_hint();
@@ -306,21 +308,25 @@ void reh_call_exec_node_hook(pTHX_ regexp *rx, regnode *node, regmatch_info *reg
  REH_PRIVATE_MAP_FOREACH(cbs->exec_node(aTHX_ rx, node, reginfo, st));
 }
 
+EXTERN_C void reh_regfree_internal(pTHX_ REGEXP * const);
+
 void reh_re_free(pTHX_ REGEXP * const RX) {
  regexp *rx = rxREGEXP(RX);
 
  reh_private_map_delete(rx->pprivate);
 
- reh_regfree(aTHX_ RX);
+ reh_regfree_internal(aTHX_ RX);
 }
 
 #ifdef USE_ITHREADS
+
+EXTERN_C void *reh_regdupe_internal(pTHX_ REGEXP * const, CLONE_PARAMS *);
 
 void *reh_re_dupe(pTHX_ REGEXP * const RX, CLONE_PARAMS *param) {
  regexp *rx = rxREGEXP(RX);
  void   *new_ri;
 
- new_ri = reh_regdupe(aTHX_ RX, param);
+ new_ri = reh_regdupe_internal(aTHX_ RX, param);
 
  reh_private_map_copy(rx->pprivate, new_ri);
 

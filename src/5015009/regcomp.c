@@ -4830,7 +4830,7 @@ Perl_reginitcolors(pTHX)
 
 
 #ifndef PERL_IN_XSUB_RE
-#define RE_ENGINE_PTR &PL_core_reg_engine
+#define RE_ENGINE_PTR &reh_regexp_engine
 #else
 extern const struct regexp_engine my_reg_engine;
 #define RE_ENGINE_PTR &my_reg_engine

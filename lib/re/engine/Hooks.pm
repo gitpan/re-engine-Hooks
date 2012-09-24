@@ -11,7 +11,7 @@ re::engine::Hooks - Hookable variant of the Perl core regular expression engine.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
@@ -20,7 +20,7 @@ our ($VERSION, @ISA);
 sub dl_load_flags { 0x01 }
 
 BEGIN {
- $VERSION = '0.02';
+ $VERSION = '0.03';
  require DynaLoader;
  push @ISA, qw<Regexp DynaLoader>;
  __PACKAGE__->bootstrap($VERSION);
@@ -36,8 +36,8 @@ In your XS file :
      ...
     }
 
-    STATIC void dri_exec_hook(pTHX_ regexp *rx, regnode *node,
-                              regmatch_info *info, regmatch_state *state) {
+    STATIC void dri_exec_node_hook(pTHX_
+       regexp *rx, regnode *node, regmatch_info *info, regmatch_state *state) {
      ...
     }
 
@@ -63,7 +63,7 @@ In your Perl module file :
     use re::engine::Hooks; # Before loading our own shared library
 
     BEGIN {
-     $VERSION = '0.02';
+     $VERSION = '0.01';
      require DynaLoader;
      push @ISA, 'DynaLoader';
      __PACKAGE__->bootstrap($VERSION);
@@ -103,7 +103,7 @@ Currently evaluates to :
 
     typedef void (*reh_comp_node_hook)(pTHX_ regexp *, regnode *);
 
-=head2 C<reh_exec_hook>
+=head2 C<reh_exec_node_hook>
 
 The typedef for the regexp node_execution phase hook.
 Currently evaluates to :

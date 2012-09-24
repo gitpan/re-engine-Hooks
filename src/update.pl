@@ -82,18 +82,18 @@ local $SIG{'INT'} = sub { exit 1 };
 }
 
 sub key_version {
- my $v = shift;
+ my $num_version = shift;
 
- my $obj     = version->parse($v);
- my $version = $obj->normal;
- $version =~ s/^v?//;
+ my $obj            = version->parse($num_version);
+ my $pretty_version = $obj->normal;
+ $pretty_version =~ s/^v?//;
 
- my ($int, $frac) = split /\./, $v, 2;
+ my ($int, $frac) = split /\./, $num_version, 2;
 
  die 'Wrong fractional part' if length $frac > 6;
  $frac .= '0' x (6 - length $frac);
 
- "$int$frac" => $version;
+ "$int$frac" => [ $num_version, $pretty_version ];
 }
 
 my %perls = map key_version($_),
@@ -246,6 +246,9 @@ sub patch_regcomp {
  } elsif ($line =~ /end node insert/) {
   push @{$patched_chunks{$file}}, 'COMP_NODE_HOOK';
   return $line, "    REH_CALL_COMP_NODE_HOOK(pRExC_state->rx, convert);\n";
+ } elsif ($line =~ /&PL_core_reg_engine/) {
+  $line =~ s/&PL_core_reg_engine\b/&reh_regexp_engine/g;
+  return $line;
  }
 
  return $line;
@@ -301,23 +304,26 @@ sub patch_source_file {
 }
 
 for my $tag (sort { $a <=> $b } keys %perls) {
- my $version = $perls{$tag};
+ my ($num_version, $pretty_version) = @{$perls{$tag}};
 
  my $dir = File::Spec->catdir($target, $tag);
 
- print "Working on perl $version\n";
+ print "Working on perl $pretty_version\n";
 
  my $tmp_guard = Guard::Path->new(path => $tmp_dir);
 
  my $orig_dir = File::Spec->catdir($dir, 'orig');
- my @files    = qw<regcomp.c regexec.c dquote_static.c>;
+
+ my @files = qw<regcomp.c regexec.c>;
+ push @files, 'dquote_static.c'  if $num_version >= 5.013_006;
+ push @files, 'inline_invlist.c' if $num_version >= 5.017_004;
  for my $file (@files) {
   my $orig_file = File::Spec->catfile($orig_dir, $file);
   if (-e $orig_file) {
    print "  Already have original $file\n";
   } else {
    print "  Need to get original $file\n";
-   fetch_source_file($file, $version => $orig_dir);
+   fetch_source_file($file, $pretty_version => $orig_dir);
   }
 
   if (-s $orig_file) {
