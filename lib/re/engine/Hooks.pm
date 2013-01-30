@@ -11,7 +11,7 @@ re::engine::Hooks - Hookable variant of the Perl core regular expression engine.
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =cut
 
@@ -20,7 +20,7 @@ our ($VERSION, @ISA);
 sub dl_load_flags { 0x01 }
 
 BEGIN {
- $VERSION = '0.03';
+ $VERSION = '0.04';
  require DynaLoader;
  push @ISA, qw<Regexp DynaLoader>;
  __PACKAGE__->bootstrap($VERSION);
@@ -237,7 +237,7 @@ You can find documentation for this module with the perldoc command :
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2012 Vincent Pit, all rights reserved.
+Copyright 2012,2013 Vincent Pit, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 

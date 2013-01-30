@@ -1,5 +1,10 @@
 Revision history for re-engine-Hooks
 
+0.04    2013-01-30 19:30 UTC
+        + Tst : t/93-pod-spelling.t does not crash anymore on perl 5.12 and
+                below.
+        + Upd : Support for perl 5.12.5, 5.14.3, 5.16.2 and 5.17.[5678].
+
 0.03    2012-09-24 11:10 UTC
         + Doc : reh_exec_hook() has been correctly renamed to
                 reh_exec_node_hook() in the documentation.

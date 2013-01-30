@@ -16,6 +16,16 @@ my %PREREQ_PM = (
  'DynaLoader' => 0,
 );
 
+my %BUILD_REQUIRES = (
+ 'ExtUtils::Depends'   => 0,
+ 'ExtUtils::MakeMaker' => 0,
+ 'File::Spec'          => 0,
+ 'POSIX'               => 0,
+ 'Test::More'          => 0,
+ 'blib'                => 0,
+ %PREREQ_PM,
+);
+
 my %META = (
  configure_requires => {
   'ExtUtils::Depends'   => 0,
@@ -23,13 +33,7 @@ my %META = (
   'File::Spec'          => 0,
  },
  build_requires => {
-  'ExtUtils::Depends'   => 0,
-  'ExtUtils::MakeMaker' => 0,
-  'File::Spec'          => 0,
-  'POSIX'               => 0,
-  'Test::More'          => 0,
-  'blib'                => 0,
-  %PREREQ_PM,
+  %BUILD_REQUIRES,
  },
  dynamic_config => 1,
  resources => {
@@ -96,6 +100,7 @@ WriteMakefile(
  VERSION_FROM     => $file,
  ABSTRACT_FROM    => $file,
  PL_FILES         => {},
+ BUILD_REQUIRES   => \%BUILD_REQUIRES,
  PREREQ_PM        => \%PREREQ_PM,
  MIN_PERL_VERSION => '5.010001',
  META_MERGE       => \%META,

@@ -5,25 +5,25 @@ use warnings;
 
 use Getopt::Std;
 
+use Cwd;
 use File::Path;
 use File::Copy;
 use File::Spec;
 
+use Scalar::Util;
 use Time::HiRes;
 
 use Module::CoreList;
+use CPAN::Perl::Releases;
 use version;
 
-use File::Fetch;
+use LWP::UserAgent;
 use Archive::Extract;
 
-my $has_cpan_perl_releases;
 BEGIN {
- local $@;
- if (eval { require CPAN::Perl::Releases; 1 }) {
-  print "Will use CPAN::Perl::Releases\n";
-  $has_cpan_perl_releases = 1;
- }
+ my $old_fh = select STDOUT;
+ $|++;
+ select $old_fh;
 }
 
 my %opts;
@@ -100,13 +100,84 @@ my %perls = map key_version($_),
              grep "$_" >= '5.010001',
               keys %Module::CoreList::released;
 
+{
+ package LWP::MyUserAgent;
+
+ our @ISA;
+ BEGIN { push @ISA, 'LWP::UserAgent' }
+
+ my %cbs;
+ my %ticks;
+
+ sub new {
+  my ($class, $cb) = @_;
+
+  my $ua = bless LWP::UserAgent->new, $class;
+  $ua->timeout(10);
+  $ua->show_progress(1) if $cb;
+
+  my $tag = Scalar::Util::refaddr($ua);
+  $cbs{$tag}   = $cb;
+  $ticks{$tag} = 0;
+
+  return $ua;
+ }
+
+ sub progress {
+  my ($ua, $stat, $r) = @_;
+
+  my $tag = Scalar::Util::refaddr($ua);
+  my $cb  = $cbs{$tag};
+  return unless $cb;
+
+  my $desc;
+  if ($stat eq 'begin') {
+   $desc = '...';
+  } elsif ($stat eq 'end') {
+   $desc = 'done';
+  } elsif ($stat eq 'tick') {
+   my $tick = ++$ticks{$tag};
+   $desc = qw<- \ | />[$tick % 4];
+  } else {
+   $desc = sprintf "%.01f%%", 100 * $stat;
+  }
+
+  $cb->($stat, $desc);
+
+  return;
+ }
+
+ sub DESTROY {
+  my $ua = shift;
+
+  my $tag = Scalar::Util::refaddr($ua);
+
+  delete $cbs{$tag};
+  delete $ticks{$tag};
+
+  return;
+ }
+}
+
 sub fetch_uri {
- my ($uri, $to) = @_;
+ my ($uri, $to, $cb) = @_;
 
  my $start = [ Time::HiRes::gettimeofday ];
 
- my $ff   = File::Fetch->new(uri => $uri);
- my $file = $ff->fetch(to => $to) or die "Could not fetch $uri: " . $ff->error;
+ my $ua = LWP::MyUserAgent->new($cb);
+ my $res = $ua->get($uri);
+ die "Could not fetch $uri: " . $res->status_line unless $res->is_success;
+
+ my $here = Cwd::cwd;
+ my $file = (File::Spec::Unix->splitpath(URI->new($uri)->path))[2];
+ my $vol  = (File::Spec->splitpath($here))[0];
+ $to      =  File::Spec->catdir($here, $to)
+                                  unless File::Spec->file_name_is_absolute($to);
+ $file    =  File::Spec->catpath($vol, $to, $file);
+
+ open my $fh, '>', $file or die "Can't open $file for writing: $!";
+ print $fh $res->content;
+ close $fh or die "Can't close $file: $!";
 
  my $elapsed = Time::HiRes::tv_interval($start);
 
@@ -116,31 +187,13 @@ sub fetch_uri {
 sub perl_archive_for {
  my $version = shift;
 
- my $path;
+ my $tarballs = CPAN::Perl::Releases::perl_tarballs($version);
+ my $path     = $tarballs->{'tar.gz'};
+ die "Could not find the archive for perl $version" unless defined $path;
 
- if ($has_cpan_perl_releases) {
-  my $tarballs = CPAN::Perl::Releases::perl_tarballs($version);
+ my ($file) = ($path =~ m{([^/]*)$});
 
-  if (defined $tarballs) {
-   $path = $tarballs->{'tar.gz'};
-  }
- } else {
-  my $uri = "http://search.cpan.org/dist/perl-$version";
-
-  local $_;
-  fetch_uri($uri => \$_);
-
-  if (m{id/(([^/])/\2([^/])/\2\3[^/]*/perl-\Q$version\E\.tar\.(?:gz|bz2))}) {
-   $path = $1;
-  }
- }
-
- if (defined $path) {
-  my ($file) = ($path =~ m{([^/]*)$});
-  return "http://$cpan_mirror/authors/id/$path", $file;
- } else {
-  die "Could not infer the archive for perl $version";
- }
+ return "http://$cpan_mirror/authors/id/$path", $file;
 }
 
 sub bandwidth {
@@ -183,10 +236,24 @@ sub fetch_source_file {
  if (-e File::Spec->catfile($tmp_dir, $archive_file)) {
   print "${INDENT}$archive_file was already fetched\n";
  } else {
-  print "${INDENT}Fetching $archive_uri... ";
-  ($archive_file, my $elapsed) = fetch_uri($archive_uri => $tmp_dir);
+  print "${INDENT}Fetching $archive_uri...\n";
+  my $maxlen = 0;
+  my $cb = sub {
+   my ($stat, $desc) = @_;
+   $desc = '0%' if $stat eq 'begin';
+   my $len   = length $desc;
+   my $extra = '';
+   if ($len > $maxlen) {
+    $maxlen = $len;
+   } else {
+    $extra  = ' ' x ($maxlen - $len);
+   }
+   print "\r${INDENT}  In progress... $desc$extra";
+   print "$extra\n" if $stat eq 'end';
+  };
+  ($archive_file, my $elapsed) = fetch_uri($archive_uri => $tmp_dir, $cb);
   my ($speed, $unit) = bandwidth(-s $archive_file, $elapsed);
-  print "done at $speed$unit\n";
+  print "${INDENT}  File downloaded at $speed$unit\n";
  }
 
  my $extract_path = File::Spec->catfile($tmp_dir, "perl-$version");
