@@ -3,7 +3,7 @@ NAME
     engine.
 
 VERSION
-    Version 0.04
+    Version 0.05
 
 SYNOPSIS
     In your XS file :
@@ -128,7 +128,11 @@ EXAMPLES
     distribution. It implements a couple of simple examples.
 
 DEPENDENCIES
-    perl 5.10.1.
+    Any stable release of perl since 5.10.1, or a development release of
+    perl from the 5.19 branch.
+
+    A C compiler. This module may happen to build with a C++ compiler as
+    well, but don't rely on it, as no guarantee is made in this regard.
 
     ExtUtils::Depends.
 

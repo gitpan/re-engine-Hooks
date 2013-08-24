@@ -96,8 +96,22 @@ sub key_version {
  "$int$frac" => [ $num_version, $pretty_version ];
 }
 
+my $latest_dev_rev = 19;
+
+sub perl_is_supported {
+ my $v = "$_[0]";
+
+ return unless $v >= '5.010001';
+
+ if ($v =~ /^5\.([0-9]{2}[13579])/) {
+  return $1 >= $latest_dev_rev;
+ }
+
+ return 1;
+}
+
 my %perls = map key_version($_),
-             grep "$_" >= '5.010001',
+             grep perl_is_supported($_),
               keys %Module::CoreList::released;
 
 {
@@ -336,8 +350,10 @@ sub patch_regexec {
 }
 
 my %manglers = (
- 'regcomp.c' => \&patch_regcomp,
- 'regexec.c' => \&patch_regexec,
+ 'dquote_static.c'  => sub { $_[0] },
+ 'inline_invlist.c' => sub { $_[0] },
+ 'regcomp.c'        => \&patch_regcomp,
+ 'regexec.c'        => \&patch_regexec,
 );
 
 sub patch_source_file {
@@ -358,11 +374,20 @@ sub patch_source_file {
  open my $out, '>', $dst or die "Can't open $dst for writing: $!";
 
  while (defined(my $line = <$in>)) {
-  print $out $mangler->($line, $dst);
+  my @lines = $mangler->($line, $dst);
+
+  for (@lines) {
+   s/\s*$/\n/;                         # Remove trailing whitespace
+   1 while s/^( *)\t/$1 . (' ' x 8)/e; # Replace leading tabs by 8 spaces
+   s|^((?:    )+) {0,3}([^ ])|(' ' x ((length $1) / 4)) . $2|e;
+   s/\t/ /g;
+  }
+
+  print $out @lines;
  }
 
- my $patched_chunks  = join ' ', @{$patched_chunks{$dst}};
- my $expected_chunks = join ' ', @{$expected_chunks{$file}};
+ my $patched_chunks  = join ' ', @{$patched_chunks{$dst}   || [ ]};
+ my $expected_chunks = join ' ', @{$expected_chunks{$file} || [ ]};
  unless ($patched_chunks eq $expected_chunks) {
   die "File $dst was not properly patched (got \"$patched_chunks\", expected \"$expected_chunks\")\n";
  }

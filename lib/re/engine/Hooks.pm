@@ -1,6 +1,6 @@
 package re::engine::Hooks;
 
-use 5.010001;
+use 5.010_001;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ re::engine::Hooks - Hookable variant of the Perl core regular expression engine.
 
 =head1 VERSION
 
-Version 0.04
+Version 0.05
 
 =cut
 
@@ -20,7 +20,7 @@ our ($VERSION, @ISA);
 sub dl_load_flags { 0x01 }
 
 BEGIN {
- $VERSION = '0.04';
+ $VERSION = '0.05';
  require DynaLoader;
  push @ISA, qw<Regexp DynaLoader>;
  __PACKAGE__->bootstrap($VERSION);
@@ -210,7 +210,10 @@ It implements a couple of simple examples.
 
 =head1 DEPENDENCIES
 
-L<perl> 5.10.1.
+Any stable release of L<perl> since 5.10.1, or a development release of L<perl> from the 5.19 branch.
+
+A C compiler.
+This module may happen to build with a C++ compiler as well, but don't rely on it, as no guarantee is made in this regard.
 
 L<ExtUtils::Depends>.
 

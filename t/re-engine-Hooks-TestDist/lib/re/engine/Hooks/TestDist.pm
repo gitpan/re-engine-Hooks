@@ -1,6 +1,6 @@
 package re::engine::Hooks::TestDist;
 
-use 5.010001;
+use 5.010_001;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ our ($VERSION, @ISA);
 use re::engine::Hooks;
 
 BEGIN {
- $VERSION = '0.04';
+ $VERSION = '0.05';
  require DynaLoader;
  push @ISA, 'DynaLoader';
  __PACKAGE__->bootstrap($VERSION);

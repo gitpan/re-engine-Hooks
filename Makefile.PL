@@ -1,4 +1,4 @@
-use 5.010001;
+use 5.010_001;
 
 use strict;
 use warnings;
@@ -37,12 +37,32 @@ my %META = (
  },
  dynamic_config => 1,
  resources => {
-  bugtracker => "http://rt.cpan.org/NoAuth/ReportBug.html?Queue=$dist",
+  bugtracker => "http://rt.cpan.org/Dist/Display.html?Name=$dist",
   homepage   => "http://search.cpan.org/dist/$dist/",
   license    => 'http://dev.perl.org/licenses/',
   repository => "http://git.profvince.com/?p=perl%2Fmodules%2F$dist.git",
  },
 );
+
+my $latest_dev_rev = 19;
+
+sub is_outdated_dev_perl {
+ my ($rev) = "$]" =~ /^5\.([0-9]{2}[13579])/;
+
+ return unless defined $rev;
+
+ return $rev < $latest_dev_rev;
+}
+
+if (is_outdated_dev_perl) {
+ print STDERR <<EOF;
+     This version of perl ($]) is an outdated development release.
+     re::engine::Hooks supports all stable releases since 5.10.1, and
+     development releases after 5.$latest_dev_rev.0 only. Please consider upgrading
+     your perl to a more recent release.
+EOF
+ exit 0;
+}
 
 sub versioned_file {
  my ($file) = @_;
@@ -64,10 +84,9 @@ sub versioned_file {
 
 unless (defined versioned_file('regcomp.c')) {
  print STDERR <<EOF;
-     This version of perl ($]) is not supported by this version of
-     re::engine::Hooks. If your perl has been recently released,
-     make sure there isn't a newer version of the module available
-     on the CPAN.
+     This version of perl ($]) is not yet supported by this version of
+     re::engine::Hooks. If your perl has been recently released, make
+     sure there isn't a newer version of the module available on the CPAN.
 EOF
  exit 0;
 }
@@ -105,7 +124,7 @@ WriteMakefile(
  MIN_PERL_VERSION => '5.010001',
  META_MERGE       => \%META,
  dist             => {
-  PREOP    => "pod2text $file > \$(DISTVNAME)/README",
+  PREOP    => "pod2text -u $file > \$(DISTVNAME)/README",
   COMPRESS => 'gzip -9f', SUFFIX => 'gz'
  },
  XSPROTOARG       => '-noprototypes',

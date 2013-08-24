@@ -23,12 +23,12 @@
 #define Perl_reg_temp_copy            reh_reg_temp_copy
 #define Perl__invlist_contents        reh__invlist_contents
 
-#define Perl_reg_named_buff_fetch     reh_reg_named_buff_fetch    
-#define Perl_reg_named_buff_exists    reh_reg_named_buff_exists  
+#define Perl_reg_named_buff_fetch     reh_reg_named_buff_fetch
+#define Perl_reg_named_buff_exists    reh_reg_named_buff_exists
 #define Perl_reg_named_buff_firstkey  reh_reg_named_buff_firstkey
-#define Perl_reg_named_buff_nextkey   reh_reg_named_buff_nextkey 
-#define Perl_reg_named_buff_scalar    reh_reg_named_buff_scalar  
-#define Perl_reg_named_buff_all       reh_reg_named_buff_all     
+#define Perl_reg_named_buff_nextkey   reh_reg_named_buff_nextkey
+#define Perl_reg_named_buff_scalar    reh_reg_named_buff_scalar
+#define Perl_reg_named_buff_all       reh_reg_named_buff_all
 
 /* Do not enable debugging stuff from perl.h */
 

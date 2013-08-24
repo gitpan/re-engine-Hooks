@@ -1,5 +1,18 @@
 Revision history for re-engine-Hooks
 
+0.05    2013-08-24 19:50 UTC
+        This is a maintenance release. The code contains no functional change.
+        Satisfied users of version 0.04 can skip this update.
+        + Dep : Development releases of perls from the branches 5.11, 5.13,
+                5.15 and 5.17 are no longer supported. Support for the branch
+                5.19 will be removed as soon as the branch 5.21 is available.
+                All stable releases of perl since 5.10.1 are still supported.
+        + Doc : C++ compilers are officially NOT supported.
+        + Doc : POD headings are now properly linkable.
+        + Tst : Author tests are no longer bundled with this distribution.
+                They are only made available to authors in the git repository.
+        + Upd : Support for perl 5.14.4, 5.16.3, 5.18.[01] and 5.19.[0123].
+
 0.04    2013-01-30 19:30 UTC
         + Tst : t/93-pod-spelling.t does not crash anymore on perl 5.12 and
                 below.
