@@ -3,7 +3,7 @@ NAME
     engine.
 
 VERSION
-    Version 0.05
+    Version 0.06
 
 SYNOPSIS
     In your XS file :
@@ -41,7 +41,7 @@ SYNOPSIS
         use re::engine::Hooks; # Before loading our own shared library
 
         BEGIN {
-         $VERSION = '0.01';
+         $VERSION = '0.02';
          require DynaLoader;
          push @ISA, 'DynaLoader';
          __PACKAGE__->bootstrap($VERSION);
@@ -157,8 +157,19 @@ SUPPORT
         perldoc re::engine::Hooks
 
 COPYRIGHT & LICENSE
-    Copyright 2012,2013 Vincent Pit, all rights reserved.
+    Copyright 2012,2013,2014 Vincent Pit, all rights reserved.
 
     This program is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
+
+    Except for the contents of the src/5* directories which are slightly
+    modified versions of files extracted from the "perl" distribution and
+    are
+
+    Copyright 1987-2014, Larry Wall, all rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of either the GNU General Public License (version 1 or,
+    at your option, any later version), or the Artistic License (see
+    perlartistic).
 

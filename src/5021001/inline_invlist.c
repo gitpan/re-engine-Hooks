@@ -18,23 +18,26 @@
 #define FROM_INTERNAL_SIZE(x) ((x)/ sizeof(UV))
 
 PERL_STATIC_INLINE bool*
-S_get_invlist_offset_addr(pTHX_ SV* invlist)
+S_get_invlist_offset_addr(SV* invlist)
 {
  /* Return the address of the field that says whether the inversion list is
  * offset (it contains 1) or not (contains 0) */
-
  PERL_ARGS_ASSERT_GET_INVLIST_OFFSET_ADDR;
+
+ assert(SvTYPE(invlist) == SVt_INVLIST);
 
  return &(((XINVLIST*) SvANY(invlist))->is_offset);
 }
 
 PERL_STATIC_INLINE UV
-S__invlist_len(pTHX_ SV* const invlist)
+S__invlist_len(SV* const invlist)
 {
  /* Returns the current number of elements stored in the inversion list's
  * array */
 
  PERL_ARGS_ASSERT__INVLIST_LEN;
+
+ assert(SvTYPE(invlist) == SVt_INVLIST);
 
  return (SvCUR(invlist) == 0)
   ? 0
@@ -42,7 +45,7 @@ S__invlist_len(pTHX_ SV* const invlist)
 }
 
 PERL_STATIC_INLINE bool
-S__invlist_contains_cp(pTHX_ SV* const invlist, const UV cp)
+S__invlist_contains_cp(SV* const invlist, const UV cp)
 {
  /* Does <invlist> contain code point <cp> as part of the set? */
 

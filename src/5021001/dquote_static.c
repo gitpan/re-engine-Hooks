@@ -15,12 +15,9 @@
  Pulled from regcomp.c.
  */
 PERL_STATIC_INLINE I32
-S_regcurly(pTHX_ const char *s,
-  const bool rbrace_must_be_escaped /* Should the terminating '} be
-            preceded by a backslash?  This
-            is an abnormal case */
- )
+S_regcurly(pTHX_ const char *s)
 {
+ PERL_UNUSED_CONTEXT;
  PERL_ARGS_ASSERT_REGCURLY;
 
  if (*s++ != '{')
@@ -35,9 +32,7 @@ S_regcurly(pTHX_ const char *s,
    s++;
  }
 
- return (rbrace_must_be_escaped)
-  ? *s == '\\' && *(s+1) == '}'
-  : *s == '}';
+ return *s == '}';
 }
 
 /* XXX Add documentation after final interface and behavior is decided */
@@ -46,44 +41,36 @@ S_regcurly(pTHX_ const char *s,
 */
 
 STATIC char
-S_grok_bslash_c(pTHX_ const char source, const bool utf8, const bool output_warning)
+S_grok_bslash_c(pTHX_ const char source, const bool output_warning)
 {
 
  U8 result;
 
- if (utf8) {
-  /* Trying to deprecate non-ASCII usages.  This construct has never
-  * worked for a utf8 variant.  So, even though are accepting non-ASCII
-  * Latin1 in 5.14, no need to make them work under utf8 */
-  if (! isASCII(source)) {
-   Perl_croak(aTHX_ "Character following \"\\c\" must be ASCII");
-  }
+ if (! isPRINT_A(source)) {
+  Perl_croak(aTHX_ "%s",
+      "Character following \"\\c\" must be printable ASCII");
+ }
+ else if (source == '{') {
+  assert(isPRINT_A(toCTRL('{')));
+
+  /* diag_listed_as: Use "%s" instead of "%s" */
+  Perl_croak(aTHX_ "Use \"%c\" instead of \"\\c{\"", toCTRL('{'));
  }
 
  result = toCTRL(source);
- if (! isASCII(source)) {
-   Perl_ck_warner_d(aTHX_ packWARN2(WARN_DEPRECATED, WARN_SYNTAX),
-       "Character following \"\\c\" must be ASCII");
- }
- else if (! isCNTRL(result) && output_warning) {
-  if (source == '{') {
-   Perl_ck_warner_d(aTHX_ packWARN2(WARN_DEPRECATED, WARN_SYNTAX),
-       "\"\\c{\" is deprecated and is more clearly written as \";\"");
+ if (output_warning && isPRINT_A(result)) {
+  U8 clearer[3];
+  U8 i = 0;
+  if (! isWORDCHAR(result)) {
+   clearer[i++] = '\\';
   }
-  else {
-   U8 clearer[3];
-   U8 i = 0;
-   if (! isWORDCHAR(result)) {
-    clearer[i++] = '\\';
-   }
-   clearer[i++] = result;
-   clearer[i++] = '\0';
+  clearer[i++] = result;
+  clearer[i++] = '\0';
 
-   Perl_ck_warner(aTHX_ packWARN(WARN_SYNTAX),
-       "\"\\c%c\" is more clearly written simply as \"%s\"",
-       source,
-       clearer);
-  }
+  Perl_ck_warner(aTHX_ packWARN(WARN_SYNTAX),
+      "\"\\c%c\" is more clearly written simply as \"%s\"",
+      source,
+      clearer);
  }
 
  return result;

@@ -44,7 +44,7 @@ my %META = (
  },
 );
 
-my $latest_dev_rev = 19;
+my $latest_dev_rev = 21;
 
 sub is_outdated_dev_perl {
  my ($rev) = "$]" =~ /^5\.([0-9]{2}[13579])/;

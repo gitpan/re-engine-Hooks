@@ -96,7 +96,7 @@ sub key_version {
  "$int$frac" => [ $num_version, $pretty_version ];
 }
 
-my $latest_dev_rev = 19;
+my $latest_dev_rev = 21;
 
 sub perl_is_supported {
  my $v = "$_[0]";

@@ -4,7 +4,7 @@
       "Vincent Pit <perl@profvince.com>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 6.72, CPAN::Meta::Converter version 2.132140",
+   "generated_by" : "ExtUtils::MakeMaker version 6.98, CPAN::Meta::Converter version 2.142690",
    "license" : [
       "perl_5"
    ],
@@ -60,5 +60,5 @@
          "url" : "http://git.profvince.com/?p=perl%2Fmodules%2Fre-engine-Hooks.git"
       }
    },
-   "version" : "0.05"
+   "version" : "0.06"
 }

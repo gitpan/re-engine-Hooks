@@ -11,6 +11,10 @@
 #define __PACKAGE__     "re::engine::Hooks::TestDist"
 #define __PACKAGE_LEN__ (sizeof(__PACKAGE__)-1)
 
+#ifndef REHT_HAS_PERL
+# define REHT_HAS_PERL(R, V, S) (PERL_REVISION > (R) || (PERL_REVISION == (R) && (PERL_VERSION > (V) || (PERL_VERSION == (V) && (PERL_SUBVERSION >= (S))))))
+#endif
+
 #include "regcomp.h"
 
 STATIC SV *reht_foo_var;
@@ -48,7 +52,11 @@ STATIC void reht_custom_comp_node(pTHX_ regexp *rx, regnode *node) {
  node_name = PL_reg_name[OP(node)];
 }
 
+#if !REHT_HAS_PERL(5, 19, 1)
+
 STATIC struct re_save_state reht_state_bak;
+
+#endif
 
 STATIC void reht_custom_exec_node(pTHX_ regexp *rx, regnode *node, regmatch_info *reginfo, regmatch_state *st) {
  STRLEN      node_namelen;
@@ -57,9 +65,11 @@ STATIC void reht_custom_exec_node(pTHX_ regexp *rx, regnode *node, regmatch_info
  node_name    = PL_reg_name[OP(node)];
  node_namelen = strlen(node_name);
 
+#if !REHT_HAS_PERL(5, 19, 1)
  /* The global regexp state may be overwritten if the Perl callback does a
   * regexp match. */
  reht_state_bak = PL_reg_state;
+#endif
 
  dSP;
 
@@ -76,7 +86,9 @@ STATIC void reht_custom_exec_node(pTHX_ regexp *rx, regnode *node, regmatch_info
  FREETMPS;
  LEAVE;
 
+#if !REHT_HAS_PERL(5, 19, 1)
  PL_reg_state = reht_state_bak;
+#endif
 }
 
 /* --- XS ------------------------------------------------------------------ */
